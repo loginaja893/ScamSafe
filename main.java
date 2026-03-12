@@ -87,3 +87,92 @@ public final class ScamSafe {
         APPROVAL,
         PERMIT,
         SWAP,
+        BRIDGE,
+        WALLET_OPERATION
+    }
+
+    // ───────────────────────────── Data objects ───────────────────────────────
+
+    public static final class ScamSignal {
+        private final String id;
+        private final String description;
+        private final int weightBps;
+        private final Map<String, String> tags;
+
+        public ScamSignal(String id, String description, int weightBps, Map<String, String> tags) {
+            this.id = Objects.requireNonNull(id, "id");
+            this.description = Objects.requireNonNull(description, "description");
+            this.weightBps = clamp(weightBps, Config.SCORE_MIN, Config.SCORE_MAX);
+            this.tags = tags == null ? Collections.emptyMap() : Collections.unmodifiableMap(new HashMap<>(tags));
+        }
+
+        public String id() {
+            return id;
+        }
+
+        public String description() {
+            return description;
+        }
+
+        public int weightBps() {
+            return weightBps;
+        }
+
+        public Map<String, String> tags() {
+            return tags;
+        }
+    }
+
+    public static final class HeuristicFinding {
+        private final String ruleId;
+        private final String title;
+        private final String detail;
+        private final int severityBps;
+        private final int confidenceBps;
+        private final Map<String, String> annotations;
+
+        public HeuristicFinding(
+                String ruleId,
+                String title,
+                String detail,
+                int severityBps,
+                int confidenceBps,
+                Map<String, String> annotations
+        ) {
+            this.ruleId = Objects.requireNonNull(ruleId, "ruleId");
+            this.title = Objects.requireNonNull(title, "title");
+            this.detail = Objects.requireNonNull(detail, "detail");
+            this.severityBps = clamp(severityBps, Config.SCORE_MIN, Config.SCORE_MAX);
+            this.confidenceBps = clamp(confidenceBps, Config.SCORE_MIN, Config.SCORE_MAX);
+            this.annotations = annotations == null ? Collections.emptyMap() : Collections.unmodifiableMap(new HashMap<>(annotations));
+        }
+
+        public String ruleId() {
+            return ruleId;
+        }
+
+        public String title() {
+            return title;
+        }
+
+        public String detail() {
+            return detail;
+        }
+
+        public int severityBps() {
+            return severityBps;
+        }
+
+        public int confidenceBps() {
+            return confidenceBps;
+        }
+
+        public Map<String, String> annotations() {
+            return annotations;
+        }
+
+        public int weightedScore() {
+            long s = (long) severityBps * 3L + (long) confidenceBps * 2L;
+            return (int) clamp(s / 5L, Config.SCORE_MIN, Config.SCORE_MAX);
+        }
+    }
