@@ -265,3 +265,92 @@ public final class ScamSafe {
         }
     }
 
+    public static final class ScanResult {
+        private final String engineName;
+        private final String engineVersion;
+        private final String sourceId;
+        private final List<HeuristicFinding> findings;
+        private final int aggregateScoreBps;
+        private final RiskLevel riskLevel;
+        private final Instant scannedAt;
+
+        public ScanResult(
+                String engineName,
+                String engineVersion,
+                String sourceId,
+                List<HeuristicFinding> findings,
+                int aggregateScoreBps,
+                RiskLevel riskLevel,
+                Instant scannedAt
+        ) {
+            this.engineName = engineName;
+            this.engineVersion = engineVersion;
+            this.sourceId = sourceId;
+            this.findings = Collections.unmodifiableList(new ArrayList<>(findings));
+            this.aggregateScoreBps = clamp(aggregateScoreBps, Config.SCORE_MIN, Config.SCORE_MAX);
+            this.riskLevel = riskLevel;
+            this.scannedAt = scannedAt;
+        }
+
+        public String engineName() {
+            return engineName;
+        }
+
+        public String engineVersion() {
+            return engineVersion;
+        }
+
+        public String sourceId() {
+            return sourceId;
+        }
+
+        public List<HeuristicFinding> findings() {
+            return findings;
+        }
+
+        public int aggregateScoreBps() {
+            return aggregateScoreBps;
+        }
+
+        public RiskLevel riskLevel() {
+            return riskLevel;
+        }
+
+        public Instant scannedAt() {
+            return scannedAt;
+        }
+    }
+
+    // ───────────────────────────── Heuristics ─────────────────────────────────
+
+    public interface Heuristic {
+        String id();
+
+        String label();
+
+        HeuristicFinding evaluate(ScanContext ctx);
+    }
+
+    static abstract class AbstractHeuristic implements Heuristic {
+        private final String id;
+        private final String label;
+
+        protected AbstractHeuristic(String id, String label) {
+            this.id = id;
+            this.label = label;
+        }
+
+        @Override
+        public String id() {
+            return id;
+        }
+
+        @Override
+        public String label() {
+            return label;
+        }
+
+        protected HeuristicFinding makeFinding(
+                ScanContext ctx,
+                String detail,
+                int severity,
