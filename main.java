@@ -532,3 +532,92 @@ public final class ScamSafe {
             int idx = 0;
             for (HeuristicFinding f : top) {
                 int base = f.weightedScore();
+                int jitter = random.nextInt(350);
+                int score = clamp(base + jitter, Config.SCORE_MIN, Config.SCORE_MAX);
+                long weight = Math.max(1L, (long) (top.size() + 1 - idx));
+                sum += (long) score * weight;
+                weightSum += weight;
+                idx++;
+            }
+            if (weightSum == 0L) {
+                return 0;
+            }
+            return (int) clamp(sum / weightSum, Config.SCORE_MIN, Config.SCORE_MAX);
+        }
+    }
+
+    private static ScamSafeEngine defaultEngine() {
+        List<Heuristic> hs = new ArrayList<>();
+        hs.add(new PhraseHeuristic(
+                "SS_RULE_001",
+                "Drainer keywords",
+                "(drainer|wallet\\s*drain|rug ?pull|seed ?phrase)",
+                Config.SEVERITY_HIGH,
+                7_600
+        ));
+        hs.add(new PhraseHeuristic(
+                "SS_RULE_002",
+                "Fake support primes",
+                "(support\\s*(agent|team))?\\s*(dm|direct message)\\s*(now|immediately)",
+                Config.SEVERITY_MEDIUM,
+                6_100
+        ));
+        hs.add(new PhraseHeuristic(
+                "SS_RULE_003",
+                "Unrealistic reward promises",
+                "(guaranteed|instant)\\s*(profit|return)|1000x|\"risk free\"",
+                Config.SEVERITY_MEDIUM,
+                5_900
+        ));
+        hs.add(new UrlHeuristic("SS_RULE_010", "Suspicious URLs", ""));
+        hs.add(new AddressFormatHeuristic("SS_RULE_020", "Address clusters in message"));
+        hs.add(new TransactionShapeHeuristic("SS_RULE_030", "Risky transaction kind"));
+        return new ScamSafeEngine(hs);
+    }
+
+    // ───────────────────────────── CLI helpers ────────────────────────────────
+
+    private static void printHelp() {
+        System.out.println(ScamSafe.class.getSimpleName() + " " + Config.ENGINE_VERSION);
+        System.out.println("Usage:");
+        System.out.println("  java ScamSafe scan-text \"description here\"");
+        System.out.println("  java ScamSafe scan-file path/to/file.txt");
+        System.out.println("  java ScamSafe repl");
+    }
+
+    private static ScanContext buildTextContext(String sourceId, String text) {
+        String trimmed = text == null ? "" : text;
+        if (trimmed.length() > Config.BODY_MAX_BYTES) {
+            trimmed = trimmed.substring(0, Config.BODY_MAX_BYTES);
+        }
+        ScanContext.Builder b = new ScanContext.Builder()
+                .sourceId(sourceId)
+                .signalType(SignalType.TEXT)
+                .rawText(trimmed);
+
+        // very light inference of tx kind for demo purposes
+        String lower = trimmed.toLowerCase(Locale.ROOT);
+        TransactionKind kind = TransactionKind.UNKNOWN;
+        if (lower.contains("approve(") || lower.contains("increaseallowance(")) {
+            kind = TransactionKind.APPROVAL;
+        } else if (lower.contains("permit(")) {
+            kind = TransactionKind.PERMIT;
+        } else if (lower.contains("swap") || lower.contains("router")) {
+            kind = TransactionKind.SWAP;
+        }
+        b.put("txKind", kind);
+        return b.build();
+    }
+
+    private static void printScanResult(ScanResult result) {
+        System.out.println("engine      : " + result.engineName() + "@" + result.engineVersion());
+        System.out.println("source      : " + result.sourceId());
+        System.out.println("scanned_at  : " + result.scannedAt());
+        System.out.println("score_bps   : " + result.aggregateScoreBps());
+        System.out.println("risk_level  : " + result.riskLevel());
+        System.out.println("findings    : " + result.findings().size());
+        System.out.println();
+
+        int idx = 1;
+        for (HeuristicFinding f : result.findings()) {
+            System.out.println("#" + idx + " " + f.ruleId() + "  (" + f.weightedScore() + " bps)");
