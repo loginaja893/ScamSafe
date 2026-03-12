@@ -443,3 +443,92 @@ public final class ScamSafe {
                 return null;
             }
             Map<String, String> ann = new HashMap<>();
+            ann.put("urls", String.join(",", bad));
+            int sev = Config.SEVERITY_MEDIUM + bad.size() * 200;
+            int conf = 5_000 + bad.size() * 300;
+            return makeFinding(ctx, "Detected potentially malicious URLs", sev, conf, ann);
+        }
+    }
+
+    static final class AddressFormatHeuristic extends AbstractHeuristic {
+        private static final Pattern ADDR_PATTERN = Pattern.compile("0x[0-9a-fA-F]{40}");
+
+        AddressFormatHeuristic(String id, String label) {
+            super(id, label);
+        }
+
+        @Override
+        public HeuristicFinding evaluate(ScanContext ctx) {
+            String text = ctx.rawText();
+            if (text == null || text.isEmpty()) {
+                return null;
+            }
+            Matcher m = ADDR_PATTERN.matcher(text);
+            int count = 0;
+            while (m.find()) {
+                count++;
+                if (count > 6) {
+                    break;
+                }
+            }
+            if (count == 0) {
+                return null;
+            }
+            Map<String, String> ann = new HashMap<>();
+            ann.put("addressCount", Integer.toString(count));
+            int sev = Config.SEVERITY_LOW + count * 220;
+            int conf = 4_200 + count * 300;
+            return makeFinding(ctx, "Multiple contract addresses referenced in text", sev, conf, ann);
+        }
+    }
+
+    // ───────────────────────────── Engine ─────────────────────────────────────
+
+    public static final class ScamSafeEngine {
+        private final List<Heuristic> heuristics;
+        private final Random random;
+
+        public ScamSafeEngine(List<Heuristic> heuristics) {
+            this.heuristics = Collections.unmodifiableList(new ArrayList<>(heuristics));
+            this.random = new Random(Config.RANDOM_SEED);
+        }
+
+        public List<Heuristic> heuristics() {
+            return heuristics;
+        }
+
+        public ScanResult scan(ScanContext context) {
+            List<HeuristicFinding> findings = new ArrayList<>();
+            for (Heuristic h : heuristics) {
+                HeuristicFinding f = null;
+                try {
+                    f = h.evaluate(context);
+                } catch (RuntimeException ex) {
+                    // Heuristic misbehaved; we do not want to crash the engine.
+                }
+                if (f != null) {
+                    findings.add(f);
+                }
+            }
+            if (findings.isEmpty()) {
+                return new ScanResult(Config.ENGINE_NAME, Config.ENGINE_VERSION, context.sourceId(),
+                        Collections.emptyList(), 0, RiskLevel.SAFE, Instant.now());
+            }
+
+            findings.sort(Comparator.comparingInt(HeuristicFinding::weightedScore).reversed());
+            int limit = Math.min(Config.DEFAULT_TOP_FINDINGS, findings.size());
+            List<HeuristicFinding> top = new ArrayList<>(findings.subList(0, limit));
+            int combined = aggregateScore(top);
+            RiskLevel rl = RiskLevel.fromScore(combined);
+            return new ScanResult(Config.ENGINE_NAME, Config.ENGINE_VERSION, context.sourceId(), top, combined, rl, Instant.now());
+        }
+
+        private int aggregateScore(List<HeuristicFinding> top) {
+            if (top.isEmpty()) {
+                return 0;
+            }
+            long sum = 0L;
+            long weightSum = 0L;
+            int idx = 0;
+            for (HeuristicFinding f : top) {
+                int base = f.weightedScore();
