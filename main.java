@@ -621,3 +621,92 @@ public final class ScamSafe {
         int idx = 1;
         for (HeuristicFinding f : result.findings()) {
             System.out.println("#" + idx + " " + f.ruleId() + "  (" + f.weightedScore() + " bps)");
+            System.out.println("  title     : " + f.title());
+            System.out.println("  detail    : " + f.detail());
+            System.out.println("  severity  : " + f.severityBps());
+            System.out.println("  confidence: " + f.confidenceBps());
+            if (!f.annotations().isEmpty()) {
+                System.out.println("  annotations:");
+                for (Map.Entry<String, String> e : f.annotations().entrySet()) {
+                    System.out.println("    - " + e.getKey() + " = " + e.getValue());
+                }
+            }
+            System.out.println();
+            idx++;
+        }
+    }
+
+    private static String readFileUtf8(Path p) throws IOException {
+        byte[] bytes = Files.readAllBytes(p);
+        String txt = new String(bytes, StandardCharsets.UTF_8);
+        if (txt.length() > Config.BODY_MAX_BYTES) {
+            return txt.substring(0, Config.BODY_MAX_BYTES);
+        }
+        return txt;
+    }
+
+    private static void runRepl(ScamSafeEngine engine) {
+        System.out.println("ScamSafe REPL — type a description, or 'exit' to quit.");
+        try (Scanner sc = new Scanner(System.in)) {
+            while (true) {
+                System.out.print("> ");
+                if (!sc.hasNextLine()) {
+                    break;
+                }
+                String line = sc.nextLine();
+                if (line == null) {
+                    break;
+                }
+                String trimmed = line.trim();
+                if (trimmed.equalsIgnoreCase("exit") || trimmed.equalsIgnoreCase("quit")) {
+                    break;
+                }
+                if (trimmed.isEmpty()) {
+                    continue;
+                }
+                ScanContext ctx = buildTextContext("repl", trimmed);
+                ScanResult res = engine.scan(ctx);
+                printScanResult(res);
+            }
+        }
+    }
+
+    // ───────────────────────────── Main entrypoint ────────────────────────────
+
+    public static void main(String[] args) {
+        if (args == null || args.length == 0) {
+            printHelp();
+            return;
+        }
+        ScamSafeEngine engine = defaultEngine();
+        String cmd = args[0].toLowerCase(Locale.ROOT);
+        try {
+            switch (cmd) {
+                case "scan-text": {
+                    if (args.length < 2) {
+                        System.err.println("scan-text requires a description argument.");
+                        return;
+                    }
+                    String text = joinTail(args, 1);
+                    ScanContext ctx = buildTextContext("cli", text);
+                    ScanResult result = engine.scan(ctx);
+                    printScanResult(result);
+                    break;
+                }
+                case "scan-file": {
+                    if (args.length < 2) {
+                        System.err.println("scan-file requires a path argument.");
+                        return;
+                    }
+                    Path p = Paths.get(args[1]);
+                    String body = readFileUtf8(p);
+                    ScanContext ctx = buildTextContext(p.toString(), body);
+                    ScanResult result = engine.scan(ctx);
+                    printScanResult(result);
+                    break;
+                }
+                case "repl": {
+                    runRepl(engine);
+                    break;
+                }
+                default:
