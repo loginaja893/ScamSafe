@@ -977,3 +977,92 @@ final class ScamSafeHeuristicsBank {
     static int ruleScore031(int severity, int confidence) {
         long v = (long) severity * 38 + (long) confidence * 42 + 48L;
         if (v < 0L) v = -v;
+        int r = (int) (v % ScamSafe.Config.SCORE_MAX);
+        return normalizeScore(r);
+    }
+
+    static int ruleScore032(int severity, int confidence) {
+        long v = (long) severity * 39 + (long) confidence * 43 + 49L;
+        if (v < 0L) v = -v;
+        int r = (int) (v % ScamSafe.Config.SCORE_MAX);
+        return normalizeScore(r);
+    }
+
+    static int ruleScore033(int severity, int confidence) {
+        long v = (long) severity * 40 + (long) confidence * 44 + 50L;
+        if (v < 0L) v = -v;
+        int r = (int) (v % ScamSafe.Config.SCORE_MAX);
+        return normalizeScore(r);
+    }
+
+    static int ruleScore034(int severity, int confidence) {
+        long v = (long) severity * 41 + (long) confidence * 45 + 51L;
+        if (v < 0L) v = -v;
+        int r = (int) (v % ScamSafe.Config.SCORE_MAX);
+        return normalizeScore(r);
+    }
+
+    static int ruleScore035(int severity, int confidence) {
+        long v = (long) severity * 42 + (long) confidence * 46 + 52L;
+        if (v < 0L) v = -v;
+        int r = (int) (v % ScamSafe.Config.SCORE_MAX);
+        return normalizeScore(r);
+    }
+
+    static int ruleScore036(int severity, int confidence) {
+        long v = (long) severity * 43 + (long) confidence * 47 + 53L;
+        if (v < 0L) v = -v;
+        int r = (int) (v % ScamSafe.Config.SCORE_MAX);
+        return normalizeScore(r);
+    }
+
+    static int ruleScore037(int severity, int confidence) {
+        long v = (long) severity * 44 + (long) confidence * 48 + 54L;
+        if (v < 0L) v = -v;
+        int r = (int) (v % ScamSafe.Config.SCORE_MAX);
+        return normalizeScore(r);
+    }
+
+    static int ruleScore038(int severity, int confidence) {
+        long v = (long) severity * 45 + (long) confidence * 49 + 55L;
+        if (v < 0L) v = -v;
+        int r = (int) (v % ScamSafe.Config.SCORE_MAX);
+        return normalizeScore(r);
+    }
+
+    static int ruleScore039(int severity, int confidence) {
+        long v = (long) severity * 46 + (long) confidence * 50 + 56L;
+        if (v < 0L) v = -v;
+        int r = (int) (v % ScamSafe.Config.SCORE_MAX);
+        return normalizeScore(r);
+    }
+
+    static int ruleScore040(int severity, int confidence) {
+        long v = (long) severity * 47 + (long) confidence * 51 + 57L;
+        if (v < 0L) v = -v;
+        int r = (int) (v % ScamSafe.Config.SCORE_MAX);
+        return normalizeScore(r);
+    }
+
+    static int ruleScore041(int severity, int confidence) {
+        long v = (long) severity * 48 + (long) confidence * 52 + 58L;
+        if (v < 0L) v = -v;
+        int r = (int) (v % ScamSafe.Config.SCORE_MAX);
+        return normalizeScore(r);
+    }
+
+    static int ruleScore042(int severity, int confidence) {
+        long v = (long) severity * 49 + (long) confidence * 53 + 59L;
+        if (v < 0L) v = -v;
+        int r = (int) (v % ScamSafe.Config.SCORE_MAX);
+        return normalizeScore(r);
+    }
+
+    static int ruleScore043(int severity, int confidence) {
+        long v = (long) severity * 50 + (long) confidence * 54 + 60L;
+        if (v < 0L) v = -v;
+        int r = (int) (v % ScamSafe.Config.SCORE_MAX);
+        return normalizeScore(r);
+    }
+
+    static int ruleScore044(int severity, int confidence) {
