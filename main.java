@@ -176,3 +176,92 @@ public final class ScamSafe {
             return (int) clamp(s / 5L, Config.SCORE_MIN, Config.SCORE_MAX);
         }
     }
+
+    public static final class ScanContext {
+        private final String sourceId;
+        private final SignalType signalType;
+        private final String rawText;
+        private final byte[] rawBytes;
+        private final Map<String, Object> metadata;
+
+        private ScanContext(Builder b) {
+            this.sourceId = b.sourceId;
+            this.signalType = b.signalType;
+            this.rawText = b.rawText;
+            this.rawBytes = b.rawBytes;
+            this.metadata = Collections.unmodifiableMap(new HashMap<>(b.metadata));
+        }
+
+        public String sourceId() {
+            return sourceId;
+        }
+
+        public SignalType signalType() {
+            return signalType;
+        }
+
+        public String rawText() {
+            return rawText;
+        }
+
+        public byte[] rawBytes() {
+            return rawBytes;
+        }
+
+        public Map<String, Object> metadata() {
+            return metadata;
+        }
+
+        public String metadataString(String key) {
+            Object v = metadata.get(key);
+            return v == null ? null : String.valueOf(v);
+        }
+
+        public TransactionKind transactionKind() {
+            Object v = metadata.get("txKind");
+            if (v instanceof TransactionKind) {
+                return (TransactionKind) v;
+            }
+            return TransactionKind.UNKNOWN;
+        }
+
+        public static final class Builder {
+            private String sourceId = "unknown";
+            private SignalType signalType = SignalType.UNKNOWN;
+            private String rawText = "";
+            private byte[] rawBytes = new byte[0];
+            private final Map<String, Object> metadata = new HashMap<>();
+
+            public Builder sourceId(String id) {
+                this.sourceId = id == null ? "unknown" : id;
+                return this;
+            }
+
+            public Builder signalType(SignalType type) {
+                this.signalType = type == null ? SignalType.UNKNOWN : type;
+                return this;
+            }
+
+            public Builder rawText(String text) {
+                this.rawText = text == null ? "" : text;
+                return this;
+            }
+
+            public Builder rawBytes(byte[] bytes) {
+                this.rawBytes = bytes == null ? new byte[0] : bytes.clone();
+                return this;
+            }
+
+            public Builder put(String key, Object value) {
+                if (key != null && value != null) {
+                    metadata.put(key, value);
+                }
+                return this;
+            }
+
+            public ScanContext build() {
+                return new ScanContext(this);
+            }
+        }
+    }
+
