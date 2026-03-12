@@ -354,3 +354,92 @@ public final class ScamSafe {
                 ScanContext ctx,
                 String detail,
                 int severity,
+                int confidence,
+                Map<String, String> annotations
+        ) {
+            return new HeuristicFinding(id, label, detail, severity, confidence, annotations);
+        }
+    }
+
+    static final class PhraseHeuristic extends AbstractHeuristic {
+        private final Pattern pattern;
+        private final int severity;
+        private final int confidence;
+
+        PhraseHeuristic(String id, String label, String regex, int severity, int confidence) {
+            super(id, label);
+            this.pattern = Pattern.compile(regex, Pattern.CASE_INSENSITIVE);
+            this.severity = severity;
+            this.confidence = confidence;
+        }
+
+        @Override
+        public HeuristicFinding evaluate(ScanContext ctx) {
+            String text = ctx.rawText();
+            if (text == null || text.isEmpty()) {
+                return null;
+            }
+            Matcher m = pattern.matcher(text);
+            if (!m.find()) {
+                return null;
+            }
+            Map<String, String> ann = new HashMap<>();
+            ann.put("match", m.group());
+            ann.put("rule", id());
+            return makeFinding(ctx, "Matched suspicious phrase: \"" + m.group() + "\"", severity, confidence, ann);
+        }
+    }
+
+    static final class TransactionShapeHeuristic extends AbstractHeuristic {
+        TransactionShapeHeuristic(String id, String label) {
+            super(id, label);
+        }
+
+        @Override
+        public HeuristicFinding evaluate(ScanContext ctx) {
+            TransactionKind kind = ctx.transactionKind();
+            if (kind == TransactionKind.UNKNOWN) {
+                return null;
+            }
+            int sev = Config.SEVERITY_LOW;
+            int conf = 3_500;
+            if (kind == TransactionKind.PERMIT || kind == TransactionKind.APPROVAL) {
+                sev = Config.SEVERITY_MEDIUM;
+                conf = 5_800;
+            }
+            if (kind == TransactionKind.BRIDGE) {
+                sev = Config.SEVERITY_HIGH;
+                conf = 7_200;
+            }
+            Map<String, String> ann = new HashMap<>();
+            ann.put("txKind", kind.name());
+            return makeFinding(ctx, "Suspicious transaction pattern: " + kind, sev, conf, ann);
+        }
+    }
+
+    static final class UrlHeuristic extends AbstractHeuristic {
+        private static final Pattern URL_PATTERN = Pattern.compile("https?://[^\\s]+", Pattern.CASE_INSENSITIVE);
+
+        UrlHeuristic(String id, String label) {
+            super(id, label);
+        }
+
+        @Override
+        public HeuristicFinding evaluate(ScanContext ctx) {
+            String text = ctx.rawText();
+            if (text == null || text.isEmpty()) {
+                return null;
+            }
+            Matcher m = URL_PATTERN.matcher(text);
+            List<String> bad = new ArrayList<>();
+            while (m.find() && bad.size() < 8) {
+                String url = m.group();
+                String lower = url.toLowerCase(Locale.ROOT);
+                if (lower.contains("airdrop") || lower.contains("bonus") || lower.contains("seed") || lower.contains("drain")) {
+                    bad.add(url);
+                }
+            }
+            if (bad.isEmpty()) {
+                return null;
+            }
+            Map<String, String> ann = new HashMap<>();
